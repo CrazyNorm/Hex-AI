@@ -25,7 +25,7 @@ public class MCTS {
 
 
     public MCTS(int timeout) {
-        this.select = new RandomSelect();
+        this.select = new UCTSelect();
         this.expand = new RandomExpand();
         this.playout = new RandomPlayout();
         this.exploit = new WinRateExploit();
@@ -86,17 +86,17 @@ public class MCTS {
             Player winner = newBoard.checkWin();
             tempNode = expanded;
             while (tempNode != root) {
-                // get payoff for current node
-                int payoff;
-                if (tempNode.getAction().getPlayer() == winner) payoff = 1;
-                else payoff = -1;
-
                 // update statistics for current node
-                tempNode.addPayoff(payoff);
+                if (tempNode.getAction().getPlayer() == winner) tempNode.addPayoff(1);
                 tempNode.addCount(1);
 
                 tempNode = tempNode.getParent();
             }
+
+
+            // update statistics for root
+            if (tempNode.getAction().getPlayer() == winner) tempNode.addPayoff(1);
+            tempNode.addCount(1);
 
             count++;
         }
