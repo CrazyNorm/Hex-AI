@@ -51,4 +51,17 @@ public class Action {
         if (swap) return "SWAP\n";
         else return x + "," + y + "\n";
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        Action action = (Action) o;
+
+        if (x != action.x) return false;
+        if (y != action.y) return false;
+        if (swap != action.swap) return false;
+        return player == action.player;
+    }
 }

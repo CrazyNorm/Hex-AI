@@ -12,9 +12,9 @@ public class TreeNode {
 
     private final Action action;  // corresponding action for the node
 
-    private short count;  // no. of times node visited
+    private int count;  // no. of times node visited
 
-    private short payoff;  // cumulative payoff for play-outs passing through this node
+    private int payoff;  // cumulative payoff for play-outs passing through this node
 
     private final TreeNode parent;  // parent node (needed for backpropagation)
 
@@ -38,25 +38,43 @@ public class TreeNode {
         this.children = new ArrayList<>();
     }
 
+    public TreeNode(TreeNode parent, TreeNode oldNode) {
+        // deep copy constructor
+        // copies oldNode as a child of parent
+
+        this.action = oldNode.action;
+        this.count = oldNode.count;
+        this.payoff = oldNode.payoff;
+
+        this.parent = parent;
+        this.children = new ArrayList<>();
+
+        // deep copy every child of the old node
+        for (TreeNode child: oldNode.children)
+            this.children.add(
+                    new TreeNode(this, child)
+            );
+    }
+
 
     public Action getAction() {
         return action;
     }
 
-    public short getCount() {
+    public int getCount() {
         return count;
     }
 
     public void addCount(int delta) {
-        count = (short) (count + delta);
+        count = count + delta;
     }
 
-    public short getPayoff() {
+    public int getPayoff() {
         return payoff;
     }
 
     public void addPayoff(int delta) {
-        payoff = (short) (payoff + delta);
+        payoff = payoff + delta;
     }
 
 

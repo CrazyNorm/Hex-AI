@@ -20,7 +20,7 @@ class MCTSAgent {
     private int boardSize = 11;
 
 
-    private final int timeout = 5000;  // time to spend simulating each turn (in ms)
+    protected final int timeout = 5000;  // time to spend simulating each turn (in ms)
 
 
     private void Connect() throws UnknownHostException, IOException{
@@ -110,9 +110,6 @@ class MCTSAgent {
     }
 
     private void makeMove(String board){
-        // instantiate MCTS class
-        MCTS mcts = new MCTS(timeout, true);
-
         // convert colour string to player object
         // root node represents board before making new move, so player at root should be the opponent
         Player p;
@@ -123,8 +120,18 @@ class MCTSAgent {
         Board b = new Board(board);
 
         // apply MCTS & send resulting action
-        Action a = mcts.search(b, p);
+        Action a = runSearch(b, p);
         sendMessage(a.toString());
+    }
+
+    protected Action runSearch(Board b, Player p) {
+        // method for running MCTS, can be overridden by subclasses
+
+        // instantiate MCTS class
+        MCTS mcts = new MCTS(timeout, true);
+
+        // return result of the search
+        return mcts.search(b, p);
     }
 
     public static String opp(String c){

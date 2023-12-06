@@ -7,7 +7,7 @@ import mcts.TreeNode;
 public class UCTSelect extends SelectionPolicy {
     // selects the child node that maximises UCT
 
-    private final double C = 0.5; // explore - exploit tradeoff
+    private final double C = 1; // explore - exploit tradeoff
 
     @Override
     public TreeNode select(TreeNode root, Board board) {

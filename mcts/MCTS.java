@@ -9,32 +9,45 @@ public class MCTS {
 
     private final int TIMEOUT;  // time in ms to spend simulating
 
-    private boolean LOG = false;  // whether to log statistics for chosen moves each turn
+    private final boolean LOG;  // whether to log statistics for chosen moves each turn
 
 
-    private final SelectionPolicy select;  // policy for selecting new node to expand
+    private SelectionPolicy select;  // policy for selecting new node to expand
 
-    private final ExpandPolicy expand;  // policy for choosing a child node to add to the tree
+    private ExpandPolicy expand;  // policy for choosing a child node to add to the tree
 
-    private final PlayoutPolicy playout;  // policy for choosing moves during play-outs
+    private PlayoutPolicy playout;  // policy for choosing moves during play-outs
 
-    private final ExploitPolicy exploit;  // policy for choosing a move to make after simulations
+    private ExploitPolicy exploit;  // policy for choosing a move to make after simulations
 
 
+    private int count;
     private TreeNode root;  // root of the partial tree
 
 
     public MCTS(int timeout) {
+        this(timeout, false);
+    }
+
+    public MCTS(int timeout, boolean log) {
         this.select = new UCTSelect();
         this.expand = new RandomExpand();
         this.playout = new RandomPlayout();
         this.exploit = new WinRateExploit();
         this.TIMEOUT = timeout;
+        this.LOG = log;
     }
 
-    public MCTS(int timeout, boolean log) {
-        this(timeout);
-        this.LOG = log;
+    public void initPolicies(
+            SelectionPolicy select,
+            ExpandPolicy expand,
+            PlayoutPolicy playout,
+            ExploitPolicy exploit
+    ) {
+        this.select = select;
+        this.expand = expand;
+        this.playout = playout;
+        this.exploit = exploit;
     }
 
 
@@ -48,7 +61,7 @@ public class MCTS {
         // find simulation time threshold
         long endTime = System.currentTimeMillis() + TIMEOUT;
 
-        int count = 0;
+        count = 0;
         while(System.currentTimeMillis() < endTime) {
             // selects the next node to expand
             TreeNode selected = select.select(root, board);
@@ -110,5 +123,15 @@ public class MCTS {
         }
 
         return chosen.getAction();
+    }
+
+
+    public TreeNode getTree() {
+        // returns root of the partial tree
+        return this.root;
+    }
+
+    public int getCount() {
+        return this.count;
     }
 }
