@@ -10,7 +10,7 @@ if [ $# -lt 1 ]; then
 fi
 
 rm logs/* -r
-mkdir out
+mkdir logs/out
 
 # associative array of agents
 declare -rA agents=(
