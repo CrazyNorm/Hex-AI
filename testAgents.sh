@@ -9,8 +9,8 @@ if [ $# -lt 1 ]; then
   usage
 fi
 
-rm logs/log*
-rm logs/out/*
+rm logs/* -r
+mkdir out
 
 # associative array of agents
 declare -rA agents=(
