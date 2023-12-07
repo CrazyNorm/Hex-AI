@@ -11,6 +11,8 @@ public class Board {
 
     private final Player[][] board;
 
+    private byte turnCount = 0;  // max turn count = 121, so byte is sufficient
+
 
     public Board() {
         board = new Player[BOARD_SIZE][BOARD_SIZE];
@@ -26,6 +28,8 @@ public class Board {
         for (int x = 0; x < BOARD_SIZE; x++)
             for (int y = 0; y < BOARD_SIZE; y++)
                 board[x][y] = oldBoard.getCell(x, y);
+
+        turnCount = oldBoard.turnCount;
     }
 
     public Board(String input) {
@@ -48,6 +52,7 @@ public class Board {
 
 
     public void applyAction(Action a) {
+        turnCount++;
         if (a.isSwap())
             // swaps the colour of every piece on the board
             for (int x = 0; x < BOARD_SIZE; x++)
@@ -68,17 +73,13 @@ public class Board {
         // gets a list of possible actions for the given player (i.e. empty cells)
         List<Action> actions = new ArrayList<>();
 
-        int occupied = 0;
         for (int x = 0; x < BOARD_SIZE; x++)
-            for (int y = 0; y < BOARD_SIZE; y++) {
+            for (int y = 0; y < BOARD_SIZE; y++)
                 if (board[x][y] == Player.NONE)
                     actions.add(new Action(p, x, y));
-                else
-                    occupied++;
-            }
 
-        // if only one position has changed from empty, swap is available
-        if (occupied == 1) actions.add(new Action(p, true));
+        // if turn count is 1, swap is available
+        if (turnCount == 1) actions.add(new Action(p, true));
 
         return actions;
     }
