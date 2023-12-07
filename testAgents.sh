@@ -16,6 +16,7 @@ mkdir logs/out
 declare -rA agents=(
  ["MCTS"]="java -cp agents mcts.MCTSAgent"
  ["RootMCTS"]="java -cp agents mcts.RootMCTSAgent"
+ ["RootMCTSSync"]="java -cp agents mcts.RootMCTSSyncAgent"
  ["JavaNaive"]="java -cp agents/DefaultAgents NaiveAgent"
  ["PythonNaive"]="python3 agents/DefaultAgents/NaiveAgent.py"
  ["alice"]=$(cat agents/TestAgents/alice/cmd.txt)
@@ -80,8 +81,8 @@ for i in $(seq 0 $((games / 2 - 1))); do
   python3 Hex.py "a=$agent1" "a=$agent2" -l -k 1>"$out" 2>&1
 
   # count wins
-  result1=$(sed '2!d' "$out")
-  result2=$(sed '3!d' "$out")
+  result1=$(tail "$out" -n -3 | head -n 1)
+  result2=$(tail "$out" -n -2 | head -n 1)
   if [[ $result1 == True* ]]; then
     ((agent1Wins+=1))
   elif [[ $result2 == True* ]]; then
@@ -95,8 +96,8 @@ for i in $(seq $((games / 2)) $((games - 1))); do
   python3 Hex.py "a=$agent1" "a=$agent2" -l -s -k 1>"$out" 2>&1
 
   # count wins
-  result1=$(sed '2!d' "$out")
-  result2=$(sed '3!d' "$out")
+  result1=$(tail "$out" -n -3 | head -n 1)
+  result2=$(tail "$out" -n -2 | head -n 1)
   if [[ $result1 == True* ]]; then
     ((agent2Wins+=1))
   elif [[ $result2 == True* ]]; then

@@ -23,6 +23,9 @@ public class MCTS {
 
     private int count;
     private TreeNode root;  // root of the partial tree
+    private TreeNode newRoot;  // new tree after synchronising
+
+    public boolean suspend;  // used to suspend simulation for synchronising
 
 
     public MCTS(int timeout) {
@@ -60,6 +63,7 @@ public class MCTS {
 
         // find simulation time threshold
         long endTime = System.currentTimeMillis() + TIMEOUT;
+        suspend = false;
 
         count = 0;
         while(System.currentTimeMillis() < endTime) {
@@ -112,6 +116,29 @@ public class MCTS {
             tempNode.addCount(1);
 
             count++;
+
+            // suspends simulation
+            if (suspend) {
+                // tracks how long the simulation is suspended
+                long suspendStart = System.currentTimeMillis();
+
+                // thread waits
+                synchronized (this) {
+                    this.notify();
+                    try {
+                        this.wait();
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+
+                // replace partial tree with new tree
+                root = new TreeNode(null, newRoot);
+
+                // adds suspend duration to end time
+                long suspendTime = System.currentTimeMillis() - suspendStart;
+                endTime += suspendTime;
+            }
         }
 
         // pick action to take
@@ -131,7 +158,20 @@ public class MCTS {
         return this.root;
     }
 
+    public void setNewTree(TreeNode root) {
+        this.newRoot = root;
+    }
+
     public int getCount() {
         return this.count;
+    }
+
+
+    public void suspend() {
+        this.suspend = true;
+    }
+
+    public void resume() {
+        this.suspend = false;
     }
 }

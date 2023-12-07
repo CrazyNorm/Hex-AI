@@ -10,17 +10,30 @@ public class RootMCTS {
     // implements root parallelization for MCTS
 
     private final int TIMEOUT;
-    private boolean LOG = false;
+    private final boolean LOG;
+
+    private final boolean SYNC_TREES;
 
     private final ExploitPolicy exploit;
+    private List<RootMCTSThread> threads;
+
 
     public RootMCTS(int timeout) {
-        this.TIMEOUT = timeout;
-        this.exploit = new WinRateExploit();
+        this(false, timeout, false);
     }
 
     public RootMCTS(int timeout, boolean log) {
-        this(timeout);
+        this(false, timeout, log);
+    }
+
+    public RootMCTS(boolean sync, int timeout) {
+        this(sync, timeout, false);
+    }
+
+    public RootMCTS(boolean sync, int timeout, boolean log) {
+        this.SYNC_TREES = sync;
+        this.TIMEOUT = timeout;
+        this.exploit = new WinRateExploit();
         this.LOG = log;
     }
 
@@ -50,17 +63,57 @@ public class RootMCTS {
         }
     }
 
+    private void treeDiff(TreeNode root, TreeNode diff) {
+        // finds difference between root & diff trees (i.e. root = root - diff)
+        // modifies root tree in place
+
+        // subtract statistics for this node
+        root.addCount(-diff.getCount());
+        root.addPayoff(-diff.getPayoff());
+
+        // for each child node of diff, look for a matching node in root
+        for (TreeNode diffChild: diff.getChildren()) {
+            boolean matched = false;
+            for (TreeNode rootChild: root.getChildren()) {
+                if (rootChild.getAction().equals(diffChild.getAction())) {
+                    // if the current child is already represented in root, diff these 2 nodes
+                    treeDiff(rootChild, diffChild);
+                    matched = true;
+                    break;
+                }
+            }
+
+            // if not matched, add a deep copy of the current child to the root tree
+            if (!matched) root.addChild(new TreeNode(root, diffChild));
+        }
+    }
+
 
     public Action search(Board board, Player p) {
         // find max threads
         int threadCount = Runtime.getRuntime().availableProcessors();
         if (LOG) System.out.println(threadCount + " processors");
-        List<RootMCTSThread> threads = new ArrayList<>();
+        threads = new ArrayList<>();
 
         // create threads with MCTS instances
         for (int i = 0; i < threadCount; i++) {
             threads.add(new RootMCTSThread(board, p, TIMEOUT));
             threads.get(i).start();
+        }
+
+        TreeNode prevSync = new TreeNode(null);
+        if (SYNC_TREES) {
+            // sync threads every second
+            long endTime = System.currentTimeMillis() + TIMEOUT - 1000;
+            while (System.currentTimeMillis() < endTime) {
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+
+                prevSync = syncThreads(prevSync, p);
+            }
         }
 
         // wait for threads to finish
@@ -77,9 +130,9 @@ public class RootMCTS {
         TreeNode root = new TreeNode(p);
         for (int i = 0; i < threadCount; i++) {
             RootMCTSThread thread = threads.get(i);
-            joinTrees(root, thread.getTree());
-            count += thread.getCount();
-            if (LOG) System.out.println("Thread " + i + ": " + thread.getCount() + " simulations");
+            joinTrees(root, thread.mcts.getTree());
+            count += thread.mcts.getCount();
+            if (LOG) System.out.println("Thread " + i + ": " + thread.mcts.getCount() + " simulations");
         }
 
         // run exploit policy on joined tree
@@ -93,21 +146,46 @@ public class RootMCTS {
         return chosen.getAction();
     }
 
+    public TreeNode syncThreads(TreeNode prevSync, Player p) {
+        TreeNode root = new TreeNode(p);
+        for (RootMCTSThread thread: threads) {
+            // suspend thread
+            synchronized (thread.mcts) {
+                thread.mcts.suspend();
+                try {
+                    thread.mcts.wait();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
+            // finds change since last sync
+            treeDiff(thread.mcts.getTree(), prevSync);
+
+            // join current partial tree
+            joinTrees(root, thread.mcts.getTree());
+        }
+
+        // update tree & resume threads
+        for (RootMCTSThread thread: threads) {
+            synchronized (thread.mcts) {
+                thread.mcts.setNewTree(root);
+                thread.mcts.resume();
+                thread.mcts.notify();
+            }
+        }
+
+        return root;
+    }
+
 
 
     private static class RootMCTSThread extends Thread {
 
         private final Board board;
-
         private final Player player;
 
-        private TreeNode root;
-
-        private int count;
-
-        private final int TIMEOUT;
-
-        private final boolean LOG;
+        private final MCTS mcts;
 
 
         public RootMCTSThread(Board b, Player p, int timeout) {
@@ -115,31 +193,16 @@ public class RootMCTS {
         }
 
         public RootMCTSThread(Board b, Player p, int timeout, boolean log) {
+            this.mcts = new MCTS(timeout, log);
             this.board = b;
             this.player = p;
-            this.TIMEOUT = timeout;
-            this.LOG = log;
-        }
-
-
-        public TreeNode getTree() {
-            return root;
-        }
-
-        public int getCount() {
-            return this.count;
         }
 
 
         @Override
         public void run() {
             // run search
-            MCTS mcts = new MCTS(TIMEOUT, LOG);
             mcts.search(board, player);
-
-            // get root & count from search
-            this.root = mcts.getTree();
-            this.count = mcts.getCount();
 
             // thread terminates
         }
