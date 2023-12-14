@@ -131,7 +131,7 @@ class MCTSAgent {
         MCTS mcts = new MCTS(timeout, true);
 
         // return result of the search
-        return mcts.search(b, p);
+        return mcts.search(b, new TreeNode(p));
     }
 
     public static String opp(String c){

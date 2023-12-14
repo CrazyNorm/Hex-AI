@@ -127,13 +127,20 @@ public class RootMCTS {
 
         // join partial trees
         int count = 0;
+        long joinStart = System.currentTimeMillis();
         TreeNode root = new TreeNode(p);
         for (int i = 0; i < threadCount; i++) {
+            long threadStart = System.currentTimeMillis();
             RootMCTSThread thread = threads.get(i);
             joinTrees(root, thread.mcts.getTree());
             count += thread.mcts.getCount();
-            if (LOG) System.out.println("Thread " + i + ": " + thread.mcts.getCount() + " simulations");
+            if (LOG) {
+                System.out.print("Thread " + i + ": " + thread.mcts.getCount() + " simulations");
+                System.out.println(", " + (System.currentTimeMillis() - threadStart) + " ms joining");
+            }
         }
+
+        System.out.println("\nTotal " + (System.currentTimeMillis() - joinStart) + " ms joining");
 
         // run exploit policy on joined tree
         TreeNode chosen = exploit.exploit(root);
@@ -193,7 +200,7 @@ public class RootMCTS {
         }
 
         public RootMCTSThread(Board b, Player p, int timeout, boolean log) {
-            this.mcts = new MCTS(timeout, log);
+            this.mcts = new MCTS(timeout, log, false);
             this.board = b;
             this.player = p;
         }
@@ -202,7 +209,7 @@ public class RootMCTS {
         @Override
         public void run() {
             // run search
-            mcts.search(board, player);
+            mcts.search(board, new TreeNode(player));
 
             // thread terminates
         }
